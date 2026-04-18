@@ -1,0 +1,39 @@
+import { useState } from 'react';
+
+export default function AdminLogin({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Login gagal'); return; }
+      onLogin(data);
+    } catch {
+      setError('Gagal terhubung ke server');
+    }
+  }
+
+  return (
+    <div className="login-page">
+      <form className="login-card" onSubmit={handleSubmit}>
+        <h1>🕌 Admin Login</h1>
+        <p className="login-sub">LDII Palmerah</p>
+        {error && <p className="login-error">{error}</p>}
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+          placeholder="Email" required />
+        <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+          placeholder="Password" required />
+        <button type="submit" className="btn-primary">Login</button>
+      </form>
+    </div>
+  );
+}
