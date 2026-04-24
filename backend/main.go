@@ -20,7 +20,21 @@ var db *sql.DB
 
 func main() {
 	var err error
-	connStr := "host=localhost port=5432 user=postgres password=123456 dbname=postgres sslmode=disable"
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		connStr = "host=localhost port=5432 user=postgres password=123456 dbname=postgres sslmode=disable"
+	}
+	// Neon requires sslmode=require
+	if !strings.Contains(connStr, "sslmode") {
+		if strings.Contains(connStr, "?") {
+			connStr += "&sslmode=require"
+		} else {
+			connStr += "?sslmode=require"
+		}
+	}
+	// lib/pq does not support channel_binding, remove it
+	connStr = removeParam(connStr, "channel_binding")
+	log.Println("Connecting to DB...")
 	db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("DB open error:", err)
@@ -55,8 +69,15 @@ func main() {
 	// Serve uploads
 	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
-	log.Println("Server berjalan di http://localhost:8082")
-	log.Fatal(http.ListenAndServe(":8082", r))
+	//lhost:8082")
+	//log.Fatal(http.ListenAndServe(":8082", r))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8082"
+	}
+	log.Println("Server berjalan di port:", port)
+	log.Fatal(http.ListenAndServe(":"+port, r))
+
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -166,11 +187,21 @@ func updateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&u)
 
 	if u.Password != "" {
-		db.Exec(`UPDATE lp_users SET name=$1, email=$2, password=$3, role=$4 WHERE id=$5`,
+		_, err := db.Exec(`UPDATE lp_users SET name=$1, email=$2, password=$3, role=$4 WHERE id=$5`,
 			u.Name, u.Email, u.Password, u.Role, id)
+		if err != nil {
+			log.Println("UPDATE user error:", err)
+			jsonError(w, err.Error(), 500)
+			return
+		}
 	} else {
-		db.Exec(`UPDATE lp_users SET name=$1, email=$2, role=$3 WHERE id=$4`,
+		_, err := db.Exec(`UPDATE lp_users SET name=$1, email=$2, role=$3 WHERE id=$4`,
 			u.Name, u.Email, u.Role, id)
+		if err != nil {
+			log.Println("UPDATE user error:", err)
+			jsonError(w, err.Error(), 500)
+			return
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "User updated"})
@@ -179,6 +210,7 @@ func updateUser(w http.ResponseWriter, r *http.Request) {
 func deleteUser(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	db.Exec(`DELETE FROM lp_users WHERE id=$1`, id)
+	log.Println("DELETE user id:", id)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "User deleted"})
 }
@@ -304,6 +336,7 @@ func createBerita(w http.ResponseWriter, r *http.Request) {
 	err = db.QueryRow(`INSERT INTO lp_berita (judul,konten,gambar,penulis,kategori,published) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
 		judul, konten, gambarPath, penulis, kategori, published).Scan(&id)
 	if err != nil {
+		log.Println("INSERT berita error:", err)
 		jsonError(w, "Gagal: "+err.Error(), 500)
 		return
 	}
@@ -345,11 +378,21 @@ func updateBerita(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if gambarPath != "" {
-		db.Exec(`UPDATE lp_berita SET judul=$1, konten=$2, gambar=$3, penulis=$4, kategori=$5, published=$6 WHERE id=$7`,
+		_, err = db.Exec(`UPDATE lp_berita SET judul=$1, konten=$2, gambar=$3, penulis=$4, kategori=$5, published=$6 WHERE id=$7`,
 			judul, konten, gambarPath, penulis, kategori, published, id)
+		if err != nil {
+			log.Println("UPDATE berita error:", err)
+			jsonError(w, err.Error(), 500)
+			return
+		}
 	} else {
-		db.Exec(`UPDATE lp_berita SET judul=$1, konten=$2, penulis=$3, kategori=$4, published=$5 WHERE id=$6`,
+		_, err = db.Exec(`UPDATE lp_berita SET judul=$1, konten=$2, penulis=$3, kategori=$4, published=$5 WHERE id=$6`,
 			judul, konten, penulis, kategori, published, id)
+		if err != nil {
+			log.Println("UPDATE berita error:", err)
+			jsonError(w, err.Error(), 500)
+			return
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Berita updated"})
@@ -363,6 +406,7 @@ func deleteBerita(w http.ResponseWriter, r *http.Request) {
 		os.Remove(gambar)
 	}
 	db.Exec(`DELETE FROM lp_berita WHERE id=$1`, id)
+	log.Println("DELETE berita id:", id)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Berita deleted"})
 }
@@ -371,4 +415,24 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+func removeParam(connStr, param string) string {
+	// Remove ?param=value or &param=value from URL
+	for _, prefix := range []string{"&" + param + "=", "?" + param + "="} {
+		if idx := strings.Index(connStr, prefix); idx != -1 {
+			end := strings.Index(connStr[idx+1:], "&")
+			if end == -1 {
+				connStr = connStr[:idx]
+			} else {
+				// Replace removed param, fix ? vs &
+				if strings.HasPrefix(prefix, "?") {
+					connStr = connStr[:idx] + "?" + connStr[idx+1+end+1:]
+				} else {
+					connStr = connStr[:idx] + connStr[idx+1+end:]
+				}
+			}
+		}
+	}
+	return connStr
 }
