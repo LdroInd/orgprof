@@ -16,19 +16,20 @@ export default function AdminBerita() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const fd = new FormData();
-    fd.append('judul', form.judul);
-    fd.append('konten', form.konten);
-    fd.append('penulis', form.penulis);
-    fd.append('kategori', form.kategori);
-    fd.append('published', form.published);
-    if (gambar) fd.append('gambar', gambar);
+    const headers = { 'Content-Type': 'application/json' };
+    const payload = {
+      judul: form.judul,
+      konten: form.konten,
+      penulis: form.penulis,
+      kategori: form.kategori,
+      published: form.published,
+    };
 
     if (editId) {
-      await fetch(`/api/berita/${editId}`, { method: 'PUT', body: fd });
+      await fetch(`/api/berita/${editId}`, { method: 'PUT', headers, body: JSON.stringify(payload) });
       alert('Berita berhasil diupdate!');
     } else {
-      await fetch('/api/berita', { method: 'POST', body: fd });
+      await fetch('/api/berita', { method: 'POST', headers, body: JSON.stringify(payload) });
       alert('Berita berhasil ditambahkan!');
     }
     resetForm();
