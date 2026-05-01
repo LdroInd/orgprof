@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import NewsHeader from '../components/NewsHeader';
 import NewsFooter from '../components/NewsFooter';
+import { imgSrc } from '../utils';
 
 export default function HomePage() {
   const [berita, setBerita] = useState([]);

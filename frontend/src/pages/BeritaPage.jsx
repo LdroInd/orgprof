@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { imgSrc } from '../utils';
 
 export default function BeritaPage() {
   const [berita, setBerita] = useState([]);
@@ -27,7 +28,7 @@ export default function BeritaPage() {
             <p className="empty">Belum ada berita</p>
           ) : filtered.map(b => (
             <div key={b.id} className="berita-list-item">
-              {b.gambar && <img src={`/${b.gambar}`} alt={b.judul} className="berita-list-img" />}
+              {b.gambar && <img src={imgSrc(b.gambar)} alt={b.judul} className="berita-list-img" />}
               <div className="berita-list-body">
                 <h2>{b.judul}</h2>
                 <p className="berita-meta">{b.penulis} · {b.created_at}</p>

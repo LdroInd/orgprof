@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import NewsHeader from '../components/NewsHeader';
+import { imgSrc } from '../utils';
 import NewsFooter from '../components/NewsFooter';
 
 export default function BeritaDetail() {
@@ -36,7 +37,7 @@ export default function BeritaDetail() {
 
             {berita.gambar && (
               <div className="detail-hero-img">
-                <img src={`/${berita.gambar}`} alt={berita.judul} />
+                <img src={imgSrc(berita.gambar)} alt={berita.judul} />
               </div>
             )}
 

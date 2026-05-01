@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { imgSrc } from '../utils';
 
 export default function AdminBerita() {
   const [list, setList] = useState([]);
@@ -17,12 +18,30 @@ export default function AdminBerita() {
   async function handleSubmit(e) {
     e.preventDefault();
     const headers = { 'Content-Type': 'application/json' };
+
+    // Upload gambar ke Cloudinary jika ada
+    let gambarUrl = '';
+    if (gambar) {
+      const base64 = await toBase64(gambar);
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST', headers, body: JSON.stringify({ image: base64 }),
+      });
+      const uploadData = await uploadRes.json();
+      if (uploadData.url) {
+        gambarUrl = uploadData.url;
+      } else {
+        alert('Gagal upload gambar: ' + (uploadData.error || 'Unknown error'));
+        return;
+      }
+    }
+
     const payload = {
       judul: form.judul,
       konten: form.konten,
       penulis: form.penulis,
       kategori: form.kategori,
       published: form.published,
+      ...(gambarUrl ? { gambar: gambarUrl } : {}),
     };
 
     if (editId) {
@@ -34,6 +53,15 @@ export default function AdminBerita() {
     }
     resetForm();
     load();
+  }
+
+  function toBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+    });
   }
 
   function handleEdit(b) {
@@ -109,7 +137,7 @@ export default function AdminBerita() {
               <tr key={b.id}>
                 <td>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    {b.gambar && <img src={`/${b.gambar}`} alt="" style={{width:40,height:40,borderRadius:6,objectFit:'cover'}} />}
+                    {b.gambar && <img src={imgSrc(b.gambar)} alt="" style={{width:40,height:40,borderRadius:6,objectFit:'cover'}} />}
                     {b.judul}
                   </div>
                 </td>

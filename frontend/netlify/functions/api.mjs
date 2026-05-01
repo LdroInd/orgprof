@@ -83,6 +83,45 @@ export const handler = async (event) => {
       return json(200, { message: 'User deleted' });
     }
 
+    // === UPLOAD IMAGE ===
+    if (path === '/upload' && method === 'POST') {
+      const { image } = body; // base64 string
+      if (!image) return json(400, { error: 'Image wajib diisi' });
+
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+      const apiKey = process.env.CLOUDINARY_API_KEY;
+      const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+      if (!cloudName || !apiKey || !apiSecret) {
+        return json(500, { error: 'Cloudinary belum dikonfigurasi' });
+      }
+
+      const timestamp = Math.floor(Date.now() / 1000);
+      const paramsToSign = `timestamp=${timestamp}`;
+
+      // Generate SHA1 signature
+      const crypto = await import('crypto');
+      const signature = crypto.createHash('sha1').update(paramsToSign + apiSecret).digest('hex');
+
+      const formBody = new URLSearchParams({
+        file: image,
+        api_key: apiKey,
+        timestamp: String(timestamp),
+        signature,
+      });
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formBody,
+      });
+      const result = await res.json();
+
+      if (result.secure_url) {
+        return json(200, { url: result.secure_url });
+      }
+      return json(500, { error: result.error?.message || 'Upload gagal' });
+    }
+
     // === BERITA ===
     if (path === '/berita' && method === 'GET') {
       const r = await pool.query(`SELECT id, judul, konten, COALESCE(gambar,'') as gambar, COALESCE(penulis,'') as penulis,
