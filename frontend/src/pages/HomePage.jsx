@@ -58,7 +58,7 @@ export default function HomePage() {
                   >
                     <div className="news-slide-img">
                       {b.gambar ? (
-                        <img src={`/${b.gambar}`} alt={b.judul} />
+                        <img src={imgSrc(b.gambar)} alt={b.judul} />
                       ) : (
                         <div className="news-img-placeholder">📰</div>
                       )}
@@ -112,7 +112,7 @@ export default function HomePage() {
                 <Link to={`/berita/${b.id}`} key={b.id} className="news-grid-card">
                   <div className="news-grid-img">
                     {b.gambar ? (
-                      <img src={`/${b.gambar}`} alt={b.judul} />
+                      <img src={imgSrc(b.gambar)} alt={b.judul} />
                     ) : (
                       <div className="news-img-placeholder-sm">📰</div>
                     )}
@@ -145,7 +145,7 @@ export default function HomePage() {
                 <Link to={`/berita/${b.id}`} key={b.id} className="news-grid-card">
                   <div className="news-grid-img">
                     {b.gambar ? (
-                      <img src={`/${b.gambar}`} alt={b.judul} />
+                      <img src={imgSrc(b.gambar)} alt={b.judul} />
                     ) : (
                       <div className="news-img-placeholder-sm">🤝</div>
                     )}
@@ -180,7 +180,7 @@ export default function HomePage() {
                 <Link to={`/berita/${b.id}`} key={b.id} className="news-grid-card">
                   <div className="news-grid-img">
                     {b.gambar ? (
-                      <img src={`/${b.gambar}`} alt={b.judul} />
+                      <img src={imgSrc(b.gambar)} alt={b.judul} />
                     ) : (
                       <div className="news-img-placeholder-sm">🎉</div>
                     )}
