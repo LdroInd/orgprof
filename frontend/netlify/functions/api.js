@@ -23,9 +23,19 @@ exports.handler = async (event) => {
     return json(200, {});
   }
 
-  const path = event.path.replace('/.netlify/functions/api', '').replace('/api', '');
+  const rawPath = event.path || event.rawUrl || '';
+  const path = rawPath
+    .replace('/.netlify/functions/api', '')
+    .replace(/^\/api/, '')
+    || '/';
   const method = event.httpMethod;
-  const body = event.body ? JSON.parse(event.body) : {};
+
+  let body = {};
+  if (event.body) {
+    try { body = JSON.parse(event.body); } catch (e) { body = {}; }
+  }
+
+  console.log(`[API] ${method} ${path}`);
 
   try {
     // === AUTH ===
